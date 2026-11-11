@@ -1,46 +1,45 @@
-# Monitor e Consolidador de Registros de Defensivos Agrícolas (MAPA / Agrofit)
+# Monitor de Registros de Defensivos Agrícolas (MAPA / Agrofit)
 
-Automação em **Python** para coleta via *Web Scraping*, higienização de bases públicas e geração de relatórios executivos em **Excel** sobre os registros de defensivos agrícolas (químicos e biológicos) aprovados no Brasil pelo **Ministério da Agricultura e Pecuária (MAPA / Agrofit)**.
+Automação em **Python** que coleta as bases públicas de defensivos agrícolas registrados no Brasil (**Agrofit / Ministério da Agricultura e Pecuária**), organiza os dados e gera um relatório em **Excel** pronto para análise.
 
-> **Planilha gerada pelo projeto:** O relatório completo em Excel pode ser baixado diretamente em [`output/panorama_registros_pesticidas_mapa.xlsx`](output/panorama_registros_pesticidas_mapa.xlsx).
+> **Relatório gerado:** [`output/panorama_registros_pesticidas_mapa.xlsx`](output/panorama_registros_pesticidas_mapa.xlsx)
 
 ---
 
-## Principais Insights Extraídos pela Automação
+## Principais resultados
 
-A partir do processamento automatizado das bases oficiais de **Produtos Formulados** e **Produtos Técnicos** do Agrofit/MAPA, o pipeline identificou:
+> Números referentes à coleta de **10/11/2026**. O MAPA atualiza a base com frequência, então uma nova execução pode trazer valores diferentes. A data exata da coleta fica registrada na aba `0_Sobre` da planilha.
 
-| Indicador | Resultado Consolidado |
+| Indicador | Resultado |
 |---|---|
-| **Produtos Formulados Únicos Registrados** | **4.432 registros** *(consolidados a partir de 281.823 linhas brutas de indicações cultura × praga)* |
-| **Produtos Técnicos Únicos Registrados** | **3.024 registros** |
-| **Divisão por Origem (Formulados)** | **3.509 Químicos/Sintéticos** (79,2%) vs. **923 Biológicos/Bioinsumos** (20,8%) |
-| **Top Países Fabricantes (Produtos Técnicos)** | 1º **China** (2.071 registros / 68,5%) · 2º **Índia** (258 / 8,5%) · 3º **Brasil** (84) · 4º **EUA** (72) |
-| **Top 5 Moléculas em Produtos Técnicos** | 1º **Protioconazol** (93) · 2º **Azoxistrobina** (72) · 3º **Glifosato** (71) · 4º **Tebuconazol** (68) · 5º **Glufosinato - sal de amônio** (58) |
-| **Top 5 Titulares (Produtos Formulados)** | 1º **Syngenta** (269) · 2º **Nortox** (172) · 3º **Adama** (163) · 4º **UPL** (162) · 5º **Rainbow** (159) |
+| **Produtos formulados únicos** | **4.432** *(consolidados a partir de 281.823 linhas brutas de indicações cultura × praga)* |
+| **Produtos técnicos únicos** | **3.024** |
+| **Origem (formulados)** | **3.509 químicos/sintéticos** (79,2%) vs. **923 biológicos/bioinsumos** (20,8%) |
+| **Países fabricantes (produtos técnicos)** | 1º **China** (2.071 / 68,5%) · 2º **Índia** (258 / 8,5%) · 3º **Brasil** (84) · 4º **EUA** (72) |
+| **Top 5 ingredientes ativos (produtos técnicos)** | **Protioconazol** (93) · **Azoxistrobina** (72) · **Glifosato** (71) · **Tebuconazol** (68) · **Glufosinato - sal de amônio** (58) |
+| **Top 5 titulares (formulados)** | **Syngenta** (269) · **Nortox** (172) · **Adama** (163) · **UPL** (162) · **Rainbow** (159) |
 
 ---
 
-## Tratamento e Organização da Base (Data Cleaning)
+## Tratamento da base
 
-Bases públicas governamentais apresentam inconsistências estruturais que distorcem análises diretas no Excel. Este pipeline corrige automaticamente:
-
-1. **Desduplicação por Registro (`NR_REGISTRO`):** A base bruta de produtos formulados possui **281.823 linhas**, pois repete o mesmo produto para cada combinação de cultura e alvo biológico. O script contabiliza a abrangência de usos (`QTD_INDICACOES_CULTURA_PRAGA`) e consolida os **4.432 produtos únicos**.
-2. **Extração de País do Fabricante via Regex:** Extrai o país de origem embutido em strings compostas na coluna `EMPRESA_PAIS_TIPO` (ex.: `<CHINA, REPUBLICA POPULAR>`, `<ÍNDIA>`).
-3. **Padronização de Empresas Titulares:** Remove sufixos despadronizados de município/UF (como `- Londrina/PR` ou `São Paulo/SP`) para evitar fragmentação na contagem por empresa.
-4. **Padronização de Ingredientes Ativos e Colunas:** Corrige divergências de caixa alta/baixa (ex.: `glifosato` vs. `Glifosato`), isola o ingrediente ativo principal da concentração e corrige erros de grafia nos cabeçalhos originais (`GRUPO_QUIMICI`).
+1. **Desduplicação por registro (`NR_REGISTRO`):** a base bruta repete o mesmo produto para cada combinação de cultura e praga. O pipeline conta essas indicações (`QTD_INDICACOES_CULTURA_PRAGA`) e consolida um registro por produto.
+2. **País do fabricante via regex:** extrai o país embutido em textos como `(Empresa<ÍNDIA>FABRICANTE)`.
+3. **Padronização de titulares:** remove sufixos de município/UF (ex.: `- Londrina/PR`) que fragmentariam a contagem por empresa.
+4. **Padronização de ingredientes ativos:** unifica maiúsculas/minúsculas (`glifosato` × `Glifosato`), separa o ativo da concentração e corrige erros de grafia nos cabeçalhos originais (`GRUPO_QUIMICI`).
+5. **Validação de layout:** se o MAPA alterar o nome de alguma coluna, o script para com uma mensagem indicando o que mudou.
 
 ---
 
-## Estrutura do Projeto
+## Estrutura do projeto
 
 ```text
 monitor-registros-pesticidas-mapa/
 ├── src/
 │   ├── 1_coletar_mapa.py     # Web Scraping (requests + BeautifulSoup) no Portal de Dados Abertos do MAPA
 │   ├── 2_organizar_base.py   # Limpeza, padronização e classificação agronômica (pandas)
-│   └── 3_gerar_excel.py      # Geração de relatório em Excel com 9 abas formatadas (openpyxl)
-├── data/                     # Armazenamento local dos CSVs brutos e tratados
+│   └── 3_gerar_excel.py      # Relatório em Excel com 10 abas formatadas (openpyxl)
+├── data/                     # CSVs brutos e tratados (gerados localmente, fora do Git)
 ├── output/
 │   └── panorama_registros_pesticidas_mapa.xlsx
 ├── requirements.txt
@@ -49,14 +48,44 @@ monitor-registros-pesticidas-mapa/
 
 ---
 
-## Como Executar
+## Como executar
+
+**Requisitos:** Python 3 (testado com Python 3.6.9) e cerca de 500 MB livres (o arquivo bruto do MAPA tem aproximadamente 380 MB). Os scripts podem ser executados a partir de qualquer pasta.
+
+### macOS / Linux
 
 ```bash
-# 1. Instale as dependências
+git clone https://github.com/wlmelo-afk/monitor-registros-pesticidas-mapa.git
+cd monitor-registros-pesticidas-mapa
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Execute as 3 etapas do pipeline
 python3 src/1_coletar_mapa.py
 python3 src/2_organizar_base.py
 python3 src/3_gerar_excel.py
 ```
+
+### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/wlmelo-afk/monitor-registros-pesticidas-mapa.git
+cd monitor-registros-pesticidas-mapa
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+python src\1_coletar_mapa.py
+python src\2_organizar_base.py
+python src\3_gerar_excel.py
+```
+
+> Se o PowerShell bloquear a ativação do ambiente virtual, rode uma vez: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+
+O download da etapa 1 pode levar alguns minutos, dependendo da conexão.
+
+---
+
+## Fonte dos dados
+
+[Agrofit – Portal de Dados Abertos do MAPA](https://dados.agricultura.gov.br/dataset/6c913699-e82e-4da3-a0a1-fb6c431e367f)
